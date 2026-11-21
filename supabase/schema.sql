@@ -128,3 +128,6 @@ grant select,insert,update,delete on public.guilds to authenticated;
 grant select,insert,delete on public.guild_members to authenticated;
 -- Public leaderboard is read-only until scores are verified by trusted server code.
 grant select on public.leaderboard_entries to authenticated;
+
+-- Refresh the Supabase Data API schema cache after creating the tables.
+notify pgrst, 'reload schema';
