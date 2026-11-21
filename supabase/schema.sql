@@ -93,7 +93,20 @@ create policy "owners delete guilds" on public.guilds for delete to authenticate
 drop policy if exists "signed-in users view guild membership" on public.guild_members;
 create policy "signed-in users view guild membership" on public.guild_members for select to authenticated using(true);
 drop policy if exists "users join guilds as themselves" on public.guild_members;
-create policy "users join guilds as themselves" on public.guild_members for insert to authenticated with check(user_id=auth.uid());
+create policy "users join guilds as themselves" on public.guild_members for insert to authenticated with check(user_id=auth.uid() and role='member');
+create or replace function public.add_guild_owner_membership()
+returns trigger language plpgsql security definer set search_path=public
+as $
+begin
+ insert into public.guild_members(guild_id,user_id,role)
+ values(new.id,new.owner_id,'owner')
+ on conflict(guild_id,user_id) do nothing;
+ return new;
+end;
+$;
+drop trigger if exists on_star_wish_guild_created on public.guilds;
+create trigger on_star_wish_guild_created after insert on public.guilds
+for each row execute procedure public.add_guild_owner_membership();
 drop policy if exists "users leave or guild owners remove members" on public.guild_members;
 create policy "users leave or guild owners remove members" on public.guild_members for delete to authenticated using(user_id=auth.uid() or exists(select 1 from public.guilds g where g.id=guild_id and g.owner_id=auth.uid()));
 drop policy if exists "signed-in users view leaderboard" on public.leaderboard_entries;
@@ -102,10 +115,16 @@ drop policy if exists "users publish own leaderboard row" on public.leaderboard_
 create policy "users publish own leaderboard row" on public.leaderboard_entries for insert to authenticated with check(user_id=auth.uid());
 drop policy if exists "users update own leaderboard row" on public.leaderboard_entries;
 create policy "users update own leaderboard row" on public.leaderboard_entries for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+-- Remove broad/default API privileges first; then grant only required operations.
+revoke all on table public.profiles, public.player_saves, public.friend_requests,
+ public.guilds, public.guild_members, public.leaderboard_entries from anon, authenticated;
 grant usage on schema public to authenticated;
-grant select,insert,update on public.profiles to authenticated;
+grant select on public.profiles to authenticated;
+grant update(display_name,avatar_url,updated_at) on public.profiles to authenticated;
 grant select,insert,update,delete on public.player_saves to authenticated;
-grant select,insert,update,delete on public.friend_requests to authenticated;
+grant select,insert,delete on public.friend_requests to authenticated;
+grant update(status,updated_at) on public.friend_requests to authenticated;
 grant select,insert,update,delete on public.guilds to authenticated;
 grant select,insert,delete on public.guild_members to authenticated;
-grant select,insert,update on public.leaderboard_entries to authenticated;
+-- Public leaderboard is read-only until scores are verified by trusted server code.
+grant select on public.leaderboard_entries to authenticated;
