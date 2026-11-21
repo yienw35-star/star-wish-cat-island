@@ -79,7 +79,7 @@ create policy "users view their friend requests" on public.friend_requests for s
 drop policy if exists "users send friend requests" on public.friend_requests;
 create policy "users send friend requests" on public.friend_requests for insert to authenticated with check(sender_id=auth.uid() and receiver_id<>auth.uid());
 drop policy if exists "participants update friend requests" on public.friend_requests;
-create policy "participants update friend requests" on public.friend_requests for update to authenticated using(sender_id=auth.uid() or receiver_id=auth.uid()) with check(sender_id=auth.uid() or receiver_id=auth.uid());
+create policy "receivers respond to friend requests" on public.friend_requests for update to authenticated using(receiver_id=auth.uid()) with check(receiver_id=auth.uid());
 drop policy if exists "participants delete friend requests" on public.friend_requests;
 create policy "participants delete friend requests" on public.friend_requests for delete to authenticated using(sender_id=auth.uid() or receiver_id=auth.uid());
 drop policy if exists "signed-in users view guilds" on public.guilds;
