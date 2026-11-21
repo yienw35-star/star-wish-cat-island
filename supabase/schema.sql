@@ -96,14 +96,14 @@ drop policy if exists "users join guilds as themselves" on public.guild_members;
 create policy "users join guilds as themselves" on public.guild_members for insert to authenticated with check(user_id=auth.uid() and role='member');
 create or replace function public.add_guild_owner_membership()
 returns trigger language plpgsql security definer set search_path=public
-as $
+as $$
 begin
  insert into public.guild_members(guild_id,user_id,role)
  values(new.id,new.owner_id,'owner')
  on conflict(guild_id,user_id) do nothing;
  return new;
 end;
-$;
+$$;
 drop trigger if exists on_star_wish_guild_created on public.guilds;
 create trigger on_star_wish_guild_created after insert on public.guilds
 for each row execute procedure public.add_guild_owner_membership();
