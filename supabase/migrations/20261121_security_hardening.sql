@@ -23,6 +23,7 @@ for insert to authenticated
 with check(user_id=auth.uid() and role='member');
 
 -- A receiver can change only the response fields, not rewrite request ownership.
+drop policy if exists "participants update friend requests" on public.friend_requests;
 drop policy if exists "receivers respond to friend requests" on public.friend_requests;
 create policy "receivers respond to friend requests" on public.friend_requests
 for update to authenticated
